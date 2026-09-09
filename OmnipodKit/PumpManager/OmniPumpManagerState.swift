@@ -85,6 +85,12 @@ public struct OmniPumpManagerState: RawRepresentable, Equatable {
     // Currently only available for DASH
     var podKeepAlive: PodKeepAlive
 
+    // Currently only available for DASH
+    var keepPodDisconnectedInBackground: Bool = false
+
+    var podWakeUpCount: Int = 0
+    var lastPodWakeUpDate: Date?
+
     // Eros / PodKeepAlive-RileyLink only state
     var rileyLinkConnectionManagerState: RileyLinkConnectionState? = nil
     var pairingAttemptAddress: UInt32? = nil
@@ -334,6 +340,8 @@ public struct OmniPumpManagerState: RawRepresentable, Equatable {
 
         self.podAttachmentConfirmed = rawValue["podAttachmentConfirmed"] as? Bool ?? false
 
+        self.keepPodDisconnectedInBackground = rawValue["keepPodDisconnectedInBackground"] as? Bool ?? false
+
         self.initialConfigurationCompleted = rawValue["initialConfigurationCompleted"] as? Bool ?? true
 
         self.acknowledgedTimeOffsetAlert = rawValue["acknowledgedTimeOffsetAlert"] as? Bool ?? false
@@ -341,6 +349,9 @@ public struct OmniPumpManagerState: RawRepresentable, Equatable {
         if let lastPumpDataReportDate = rawValue["lastPumpDataReportDate"] as? Date {
             self.lastPumpDataReportDate = lastPumpDataReportDate
         }
+
+        self.podWakeUpCount = rawValue["podWakeUpCount"] as? Int ?? 0
+        self.lastPodWakeUpDate = rawValue["lastPodWakeUpDate"] as? Date
 
         self.activeAlerts = []
         if let rawActiveAlerts = rawValue["activeAlerts"] as? [PumpManagerAlert.RawValue] {
@@ -397,6 +408,9 @@ public struct OmniPumpManagerState: RawRepresentable, Equatable {
 
         value["podType"] = podType.rawValue
         value["podKeepAlive"] = podKeepAlive.rawValue
+        value["keepPodDisconnectedInBackground"] = keepPodDisconnectedInBackground
+        value["podWakeUpCount"] = podWakeUpCount
+        value["lastPodWakeUpDate"] = lastPodWakeUpDate
         value["insulinType"] = insulinType?.rawValue
         value["podState"] = podState?.rawValue
         value["rileyLinkConnectionManagerState"] = rileyLinkConnectionManagerState?.rawValue
@@ -458,6 +472,9 @@ extension OmniPumpManagerState: CustomDebugStringConvertible {
             "* initialConfigurationCompleted: \(initialConfigurationCompleted)",
             "* podType: \(podType)",
             "* podKeepAlive: \(podKeepAlive)",
+            "* keepPodDisconnectedInBackground: \(keepPodDisconnectedInBackground)",
+            "* podWakeUpCount: \(podWakeUpCount)",
+            "* lastPodWakeUpDate: \(optionalString(lastPodWakeUpDate))",
             "",
         ].joined(separator: "\n")
         if podType.isEros || podKeepAlive == .rileyLink {

@@ -61,6 +61,16 @@ class BlePodComms: PodComms {
         bluetoothManager?.setHeartbeatRequest(request)
     }
 
+    /// Mirrors the OmniPumpManager preference that keeps the pod disconnected while the app is backgrounded.
+    func setKeepPodDisconnectedInBackground(_ enabled: Bool) {
+        bluetoothManager?.keepPodDisconnectedInBackground = enabled
+    }
+
+    /// True while OmnipodKit's own routine pod work must be skipped (preference on, app backgrounded).
+    var suppressesBackgroundWork: Bool {
+        bluetoothManager?.suppressesBackgroundWork ?? false
+    }
+
     // Removes references to the bluetoothManager to avoid future
     // "Bluetooth use unsupported on this device" errors on the
     // next BlePodComms instantiation and subsequent usage.

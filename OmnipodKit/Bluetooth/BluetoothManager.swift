@@ -317,6 +317,18 @@ class BluetoothManager: NSObject {
     /// OmniPumpManager to track podKeepAlive.keepsPodConnectedInBackground state.
     var podKeepAliveKeepsConnectedInBackground = false
 
+    /// Set via BlePodComms.setKeepPodDisconnectedInBackground() from the OmniPumpManager preference.
+    /// Takes precedence over `podKeepAliveKeepsConnectedInBackground`, so a background Pod Keep Alive
+    /// mode cannot hold the link open against the user's explicit choice.
+    var keepPodDisconnectedInBackground = false
+
+    /// True while OmnipodKit's own routine pod work must be skipped: the preference is on and the app is
+    /// backgrounded. Host-initiated commands are deliberately NOT gated by this — Loop calls
+    /// `ensureCurrentPumpData` immediately before an automatic dose, and blocking it would stop dosing.
+    var suppressesBackgroundWork: Bool {
+        keepPodDisconnectedInBackground && !isAppForeground
+    }
+
     /// True when the pod should be HELD connected rather than idle/background-disconnected — the gate that
     /// suppresses connect-on-demand's disconnects. True while the app is foregrounded (foreground
     /// keep-alive), OR whenever a *background* Pod Keep Alive mode (silentTune / rileyLink — DASH only) is
@@ -327,6 +339,7 @@ class BluetoothManager: NSObject {
     /// managerQueue and cross-queue by PeripheralManager (benign bool race).
     var shouldHoldConnection: Bool {
         if isAppForeground { return true }
+        if keepPodDisconnectedInBackground { return false }
         return podKeepAliveKeepsConnectedInBackground
     }
 

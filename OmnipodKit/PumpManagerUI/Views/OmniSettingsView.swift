@@ -633,6 +633,19 @@ struct OmniSettingsView: View  {
                             }
                         }
                     }
+
+                    Toggle(isOn: $viewModel.keepPodDisconnectedInBackground) {
+                        FrameworkLocalText("Keep Pod Disconnected in Background", comment: "Title for the keep pod disconnected in background toggle")
+                            .foregroundColor(Color.primary)
+                    }
+                    DescriptiveText(label: LocalizedString("When on, the pod is left disconnected while the app is in the background, and routine status refreshes started by OmnipodKit are skipped. Opening the app reconnects and refreshes as usual. A required automatic dose is still delivered. This overrides a background Pod Keep Alive mode.", comment: "Description for the keep pod disconnected in background toggle"))
+
+                    HStack {
+                        FrameworkLocalText("Pod Wake-ups", comment: "Title for the pod wake-up counter")
+                        Spacer()
+                        Text(wakeUpSummary)
+                            .foregroundColor(.secondary)
+                    }
                 }
             }
 
@@ -647,6 +660,14 @@ struct OmniSettingsView: View  {
                     Text(localizedPodDiagnosticsStr)
                         .foregroundColor(Color.primary)
                 }
+            }
+
+            private var wakeUpSummary: String {
+                guard let lastPodWakeUpDate = viewModel.lastPodWakeUpDate else {
+                    return String(viewModel.podWakeUpCount)
+                }
+                let timeString = DateFormatter.localizedString(from: lastPodWakeUpDate, dateStyle: .none, timeStyle: .short)
+                return "\(viewModel.podWakeUpCount) · \(timeString)"
             }
 
             Section() {
