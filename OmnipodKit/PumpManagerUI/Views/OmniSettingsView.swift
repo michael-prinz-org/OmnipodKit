@@ -61,6 +61,14 @@ struct OmniSettingsView: View  {
         }
         return nil
     }
+
+    private var wakeUpSummary: String {
+        guard let lastPodWakeUpDate = viewModel.lastPodWakeUpDate else {
+            return String(viewModel.podWakeUpCount)
+        }
+        let timeString = DateFormatter.localizedString(from: lastPodWakeUpDate, dateStyle: .none, timeStyle: .short)
+        return "\(viewModel.podWakeUpCount) · \(timeString)"
+    }
     
     func timeComponent(value: Int, units: String) -> some View {
         Group {
@@ -660,14 +668,6 @@ struct OmniSettingsView: View  {
                     Text(localizedPodDiagnosticsStr)
                         .foregroundColor(Color.primary)
                 }
-            }
-
-            private var wakeUpSummary: String {
-                guard let lastPodWakeUpDate = viewModel.lastPodWakeUpDate else {
-                    return String(viewModel.podWakeUpCount)
-                }
-                let timeString = DateFormatter.localizedString(from: lastPodWakeUpDate, dateStyle: .none, timeStyle: .short)
-                return "\(viewModel.podWakeUpCount) · \(timeString)"
             }
 
             Section() {
