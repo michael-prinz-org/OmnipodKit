@@ -61,6 +61,14 @@ struct OmniSettingsView: View  {
         }
         return nil
     }
+
+    private var wakeUpSummary: String {
+        guard let lastPodWakeUpDate = viewModel.lastPodWakeUpDate else {
+            return String(viewModel.podWakeUpCount)
+        }
+        let timeString = DateFormatter.localizedString(from: lastPodWakeUpDate, dateStyle: .none, timeStyle: .short)
+        return "\(viewModel.podWakeUpCount) · \(timeString)"
+    }
     
     func timeComponent(value: Int, units: String) -> some View {
         Group {
@@ -693,6 +701,19 @@ struct OmniSettingsView: View  {
                                 }
                             }
                         }
+                    }
+
+                    Toggle(isOn: $viewModel.keepPodDisconnectedInBackground) {
+                        FrameworkLocalText("Keep Pod Disconnected in Background", comment: "Title for the keep pod disconnected in background toggle")
+                            .foregroundColor(Color.primary)
+                    }
+                    DescriptiveText(label: LocalizedString("When on, the pod is left disconnected while the app is in the background, and routine status refreshes started by OmnipodKit are skipped. Opening the app reconnects and refreshes as usual. A required automatic dose is still delivered. This overrides a background Pod Keep Alive mode. This option serves as a preparatory step to resolve the Omnipod Dash Error 208.", comment: "Description for the keep pod disconnected in background toggle"))
+
+                    HStack {
+                        FrameworkLocalText("Pod Wake-ups", comment: "Title for the pod wake-up counter")
+                        Spacer()
+                        Text(wakeUpSummary)
+                            .foregroundColor(.secondary)
                     }
                 }
             }

@@ -46,6 +46,16 @@ class OmniSettingsViewModel: ObservableObject {
 
     @Published var podKeepAlivePreference: PodKeepAlive
 
+    @Published var keepPodDisconnectedInBackground: Bool {
+        didSet {
+            pumpManager.keepPodDisconnectedInBackground = keepPodDisconnectedInBackground
+        }
+    }
+
+    @Published var podWakeUpCount: Int
+
+    @Published var lastPodWakeUpDate: Date?
+
     @Published var silencePodEnd: Date?
 
     @Published var hasConnection: Bool // replaces both rileylinkConnected and isConnected
@@ -285,6 +295,9 @@ class OmniSettingsViewModel: ObservableObject {
         silencePodPreference = pumpManager.silencePod ? .enabled : .disabled
         silencePodEnd = pumpManager.silencePodEnd
         podKeepAlivePreference = pumpManager.podKeepAlive
+        keepPodDisconnectedInBackground = pumpManager.keepPodDisconnectedInBackground
+        podWakeUpCount = pumpManager.podWakeUpCount
+        lastPodWakeUpDate = pumpManager.lastPodWakeUpDate
         hasConnection = pumpManager.hasConnection
         insulinType = pumpManager.insulinType
         podDetails = pumpManager.podDetails
@@ -600,6 +613,8 @@ extension OmniSettingsViewModel: PodStateObserver {
  
     func podConnectionStateDidChange(isConnected: Bool) {
         self.hasConnection = isConnected
+        self.podWakeUpCount = self.pumpManager.podWakeUpCount
+        self.lastPodWakeUpDate = self.pumpManager.lastPodWakeUpDate
     }
 }
 

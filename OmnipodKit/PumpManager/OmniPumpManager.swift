@@ -152,6 +152,9 @@ public class OmniPumpManager: RileyLinkPumpManager {
 
         /// Initialize or disable the podKeepAlive state as needed
         self.podKeepAlive = state.podKeepAlive
+
+        /// Push the persisted connection preference down to the BluetoothManager
+        self.keepPodDisconnectedInBackground = state.keepPodDisconnectedInBackground
     }
 
     public required convenience init?(rawState: PumpManager.RawStateValue) {
@@ -411,7 +414,15 @@ public class OmniPumpManager: RileyLinkPumpManager {
 
     func omnipodPeripheralDidConnect(manager: PeripheralManager) {
         logDeviceCommunication("Pod connected \(manager.peripheral.identifier.uuidString)", type: .connection)
+        recordPodWakeUp()
         notifyPodConnectionStateDidChange(isConnected: true)
+    }
+
+    private func recordPodWakeUp() {
+        setState { state in
+            state.podWakeUpCount += 1
+            state.lastPodWakeUpDate = Date()
+        }
     }
 
     func omnipodPeripheralDidDisconnect(peripheral: CBPeripheral, error: Error?) {
@@ -921,6 +932,29 @@ extension OmniPumpManager {
         }
     }
 
+    /// When on, the pod is left disconnected while the app is in the background and OmnipodKit skips its
+    /// own routine pod work. Host-initiated commands are unaffected, so an automatic dose still gets through.
+    var keepPodDisconnectedInBackground: Bool {
+        get {
+            return state.keepPodDisconnectedInBackground
+        }
+        set {
+            (podComms as? BlePodComms)?.setKeepPodDisconnectedInBackground(newValue)
+
+            setState { (state) in
+                state.keepPodDisconnectedInBackground = newValue
+            }
+        }
+    }
+
+    var podWakeUpCount: Int {
+        state.podWakeUpCount
+    }
+
+    var lastPodWakeUpDate: Date? {
+        state.lastPodWakeUpDate
+    }
+
     func buildPumpStatusHighlight(for state: OmniPumpManagerState, andDate date: Date = Date()) -> PumpStatusHighlight? {
         if state.podState?.needsCommsRecovery == true {
             return PumpStatusHighlight(
@@ -1127,6 +1161,8 @@ extension OmniPumpManager {
             // Reset other miscellaneous state variables that are actually per pod
             state.podAttachmentConfirmed = false
             state.acknowledgedTimeOffsetAlert = false
+            state.podWakeUpCount = 0
+            state.lastPodWakeUpDate = nil
         }
     }
 
@@ -3211,6 +3247,9 @@ extension OmniPumpManager: PumpManager {
                             state.activeAlerts.remove(alert)
                             state.alertsWithPendingAcknowledgment.remove(alert)
                         }
+                        session.dosesForStorage() { (doses) -> Bool in
+                            return self.store(doses: doses, in: session)
+                        }
                     case .failure:
                         return
                     }
@@ -3310,6 +3349,11 @@ extension OmniPumpManager: PodCommsDelegate {
 
         guard podComms.podState?.isSetupComplete == true else {
             self.log.debug("### Skipping post-connect processing with incomplete setup")
+            return
+        }
+
+        guard (podComms as? BlePodComms)?.suppressesBackgroundWork != true else {
+            self.log.default("Skipping post-connect status fetch while the pod is kept disconnected in the background")
             return
         }
 
@@ -3422,6 +3466,11 @@ extension OmniPumpManager {
                             }
                             self.setState { state in
                                 state.activeAlerts.remove(alert)
+                            }
+                            // acknowledgeAlerts returns a StatusResponse, so the pod state just became
+                            // current — flush it like any other command to advance lastPumpDataReportDate.
+                            session.dosesForStorage() { (doses) -> Bool in
+                                return self.store(doses: doses, in: session)
                             }
                             completion(nil)
                         case .failure(let error):
