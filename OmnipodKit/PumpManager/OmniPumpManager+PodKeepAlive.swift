@@ -29,7 +29,7 @@ extension OmniPumpManager {
         /// Create a timer to trigger a getPodStatus call after the specified time from now.
         podKeepAliveTimer?.invalidate()
         podKeepAliveTimer = Timer(timeInterval: when, repeats: false) { _ in
-            if self.hasPairedNonFaultedPod {
+            if self.hasPairedNonFaultedPod && !self.suppressesBackgroundPodWork {
                 print("@@@ timer expired, reading pod status to stay connected at \(self.timeStr(Date()))")
                 self.getPodStatus(canOptimize: false) { _ in }
             }
@@ -71,7 +71,7 @@ extension OmniPumpManager {
             let minPodKeepAliveTimerInterval: TimeInterval = .seconds(30)
 
             if timeSinceLastResponse > podKeepAliveRefreshInterval - minPodKeepAliveTimerInterval {
-                if self.hasPairedNonFaultedPod {
+                if self.hasPairedNonFaultedPod && !self.suppressesBackgroundPodWork {
                     print("@@@ doing getPodStatus with timeSinceLastResponse of \(timeSinceLastResponse.timeIntervalStr)")
                     getPodStatus(canOptimize: false) { _ in }
                 }

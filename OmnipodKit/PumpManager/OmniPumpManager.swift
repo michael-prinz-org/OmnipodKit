@@ -947,6 +947,10 @@ extension OmniPumpManager {
         }
     }
 
+    var suppressesBackgroundPodWork: Bool {
+        (podComms as? BlePodComms)?.suppressesBackgroundWork == true
+    }
+
     var podWakeUpCount: Int {
         state.podWakeUpCount
     }
