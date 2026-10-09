@@ -934,6 +934,8 @@ extension OmniPumpManager {
 
     /// When on, the pod is left disconnected while the app is in the background and OmnipodKit skips its
     /// own routine pod work. Host-initiated commands are unaffected, so an automatic dose still gets through.
+    /// Eros pods hold no Bluetooth link and OmnipodKit starts no background work for them, so there is nothing to
+    /// skip; the value is kept for a later DASH/O5 pod.
     var keepPodDisconnectedInBackground: Bool {
         get {
             return state.keepPodDisconnectedInBackground
@@ -3251,9 +3253,7 @@ extension OmniPumpManager: PumpManager {
                             state.activeAlerts.remove(alert)
                             state.alertsWithPendingAcknowledgment.remove(alert)
                         }
-                        session.dosesForStorage() { (doses) -> Bool in
-                            return self.store(doses: doses, in: session)
-                        }
+                        self.storePendingDoses(of: session)
                     case .failure:
                         return
                     }
@@ -3311,6 +3311,12 @@ extension OmniPumpManager: PumpManager {
         return success
     }
 
+    func storePendingDoses(of session: PodCommsSession) {
+        session.dosesForStorage { doses in
+            self.store(doses: doses, in: session)
+        }
+    }
+
     func store(doses: [UnfinalizedDose], completion: @escaping (_ error: Error?) -> Void) {
         let lastSync = self.lastSync
 
@@ -3356,7 +3362,7 @@ extension OmniPumpManager: PodCommsDelegate {
             return
         }
 
-        guard (podComms as? BlePodComms)?.suppressesBackgroundWork != true else {
+        guard !suppressesBackgroundPodWork else {
             self.log.default("Skipping post-connect status fetch while the pod is kept disconnected in the background")
             return
         }
@@ -3473,9 +3479,7 @@ extension OmniPumpManager {
                             }
                             // acknowledgeAlerts returns a StatusResponse, so the pod state just became
                             // current — flush it like any other command to advance lastPumpDataReportDate.
-                            session.dosesForStorage() { (doses) -> Bool in
-                                return self.store(doses: doses, in: session)
-                            }
+                            self.storePendingDoses(of: session)
                             completion(nil)
                         case .failure(let error):
                             self.setState { state in
